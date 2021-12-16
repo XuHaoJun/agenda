@@ -23,7 +23,18 @@ export const run = async function (this: Job): Promise<Job> {
       this.attrs.lastRunAt.toISOString()
     );
     this.computeNextRunAt();
-    await this.save();
+
+    const omitUnneededProps = () => {
+      const jobJson = this.toJSON();
+      delete jobJson.data;
+      delete jobJson.repeatInterval;
+      delete jobJson.disabled;
+      return jobJson;
+    };
+
+    await this.save({
+      jobToJSON: omitUnneededProps,
+    });
 
     let finished = false;
     const jobCallback = async (error?: Error, result?: unknown) => {
@@ -39,7 +50,7 @@ export const run = async function (this: Job): Promise<Job> {
       } else {
         this.attrs.lastFinishedAt = new Date();
 
-        if(this.attrs.shouldSaveResult && result) {
+        if (this.attrs.shouldSaveResult && result) {
           this.attrs.result = result;
         }
       }

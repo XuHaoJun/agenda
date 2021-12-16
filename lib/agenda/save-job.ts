@@ -1,7 +1,7 @@
 import createDebugger from "debug";
 import { ObjectId } from "mongodb";
 import { Agenda } from ".";
-import { Job } from "../job";
+import { Job, JobAttributes } from "../job";
 import { processJobs } from "../utils";
 
 const debug = createDebugger("agenda:saveJob");
@@ -63,6 +63,10 @@ const processDbResult = async function (this: Agenda, job: Job, result: any) {
   return job;
 };
 
+export interface SaveJobOptions {
+  jobToJSON?: (j: Job) => Partial<JobAttributes>;
+}
+
 /**
  * Save the properties on a job to MongoDB
  * @name Agenda#saveJob
@@ -70,7 +74,11 @@ const processDbResult = async function (this: Agenda, job: Job, result: any) {
  * @param job job to save into MongoDB
  * @returns resolves when job is saved or errors
  */
-export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
+export const saveJob = async function (
+  this: Agenda,
+  job: Job,
+  opts?: SaveJobOptions
+): Promise<Job> {
   try {
     debug("attempting to save a job into Agenda instance");
 
@@ -79,7 +87,12 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
     const { unique, uniqueOpts } = job.attrs;
 
     // Store job as JSON and remove props we don't want to store from object
-    const props = job.toJSON();
+    let props;
+    if (opts?.jobToJSON) {
+      props = opts?.jobToJSON(job);
+    } else {
+      props = job.toJSON();
+    }
     delete props._id;
     delete props.unique;
     delete props.uniqueOpts;
